@@ -1,0 +1,208 @@
+<html>
+  <head>
+  <script src="https://unpkg.com/react@16/umd/react.development.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@16/umd/react-dom.development.js" crossorigin></script>
+  <script src="https://unpkg.com/babel-standalone@6/babel.min.js"></script>
+  <script src='https://cdnjs.cloudflare.com/ajax/libs/axios/0.19.0/axios.js'></script>
+  <script src='https://cdnjs.cloudflare.com/ajax/libs/Faker/3.1.0/faker.js'></script>
+  <script src='https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.24.0/moment.js'></script>
+  <style>
+    #underline{
+      border-bottom: solid 1px tomato;
+    }
+  </style>
+
+  </head>
+  <body>
+    <div id='root'>
+    </div>
+    <script type='text/babel'>
+
+
+      const API = 'https://acme-users-api-rev.herokuapp.com/api';
+
+      const fetchUser = async ()=> {
+        const storage = window.localStorage;
+        const userId = storage.getItem('userId');
+        if(userId){
+          try {
+            return (await axios.get(`${API}/users/detail/${userId}`)).data;
+          }
+          catch(ex){
+            storage.removeItem('userId');
+            return fetchUser();
+          }
+        }
+        const user = (await axios.get(`${API}/users/random`)).data;
+        storage.setItem('userId', user.id);
+        return  user;
+      };
+
+      const Notes = ({notes, user, error, createNote, deleteNote}) => {
+        return (
+          <div>
+              <h1>The Acme Random Life</h1>
+              Welcome { user.fullName } to your Random Life!
+              <div className='error'>{ error }</div>
+              <h1>notes ({notes.length})</h1>
+              <button onClick={()=> createNote()}>Add A Random Note</button>
+              <div>
+                {
+                  notes.map(note =>
+                  <div key={note.id}>
+                  {note.text}
+                  <br />
+                  <button onClick={()=> deleteNote(note)}>Destroy</button>
+                  </div>)
+                }
+              </div>
+              <div id='underline'></div>
+          </div>
+        )
+      }
+
+      const Companies = ({followed, user, error, createCompany, deleteCompany}) => {
+        // followed is not defined, not sure why?
+        return (
+         <div>
+          <h1>followingCompanies (followed.length)</h1>
+              <button onClick={()=> createCompany()}>Add a Random followingCompanies</button>
+              <div>
+                {
+                  // followed.map(follow =>
+                  // <div key={follow.id}>
+                  // {followed.company.name}
+                  // <button onClick={()=> deleteCompany(follow)}></button>
+                  // </div>)
+                }
+              </div>
+              <div id='underline'></div>
+         </div>
+        )
+      }
+
+      const Vacation = ({vacations, user, error, createVacation, deleteVacation}) => {
+        return (
+          <div>
+              <h1>vacations ({vacations.length})</h1>
+              <button onClick={()=> createVacation()}>Add a Random vacation</button>
+              <div>
+                {
+                  vacations.map(vacation =>
+                  <div key={vacation.id}>
+                  {}
+                  <button onClick={()=> deleteVacation(vacation)}></button>
+                  </div>)
+                }
+              </div>
+              <div id='underline'></div>
+          </div>
+        )
+      }
+
+      class App extends React.Component{
+        constructor(){
+          super();
+          this.state = {
+            user: {},
+            companies: [],
+            vacations: [],
+            notes: [],
+            followingCompanies: [],
+            error: ''
+          };
+          this.createNote = this.createNote.bind(this);
+          this.deleteNote = this.deleteNote.bind(this);
+          this.createVacation = this.createVacation.bind(this);
+          this.deleteVacation = this.deleteVacation.bind(this);
+          this.createCompany = this.createCompany.bind(this);
+          this.deleteCompany = this.deleteCompany.bind(this)
+        }
+        async componentDidMount(){
+          const user = await fetchUser();
+          const companies = (await axios.get(`${API}/companies`)).data;
+          const vacations = (await axios.get(`${API}/users/${user.id}/vacations`)).data;
+          const followingCompanies = (await axios.get(`${API}/users/${user.id}/followingCompanies`)).data;
+          const notes = (await axios.get(`${API}/users/${user.id}/notes`)).data;
+          this.setState({
+            user, companies, vacations, followingCompanies, notes
+          });
+        }
+          // My create and delete for Notes
+
+          async createNote(){
+            const payload = {
+              archived: false,
+              text: ''
+            }
+            const newNote = (await axios.post(`${API}/users/${this.state.user.id}/notes`, payload)).data
+           this.setState({notes: [...this.state.notes, newNote]})
+          }
+
+          async deleteNote(note){
+            await axios.delete(`${API}/users/${this.state.user.id}/notes/${note.id}`);
+            this.setState({notes: this.state.notes.filter(n => n.id !== note.id)})
+          }
+
+
+          // My create and delete for Companies
+
+          async createCompany(){
+            const payload = {
+              rating,
+              companyId: company.id
+            }
+            const newCompany = (await axios.post(`${API}/users/${this.state.user.id}/followingCompanies`, payload)).data;
+            this.setState({followingCompanies: [...this.state.followingCompanies, newCompany]})
+          }
+          async deleteCompany(followed){
+            await axios.delete(`${API}/users/${this.state.user.id}/followingCompanies/${followed.id}`)
+            this.setState({followingCompanies: this.state.followingCompanies.filter(f => f.id !== followed.id)})
+          }
+
+
+          // My create and delete for the vacation
+
+          async createVacation(vacations){
+            const payload = {
+              startDate: date,
+              endDate: date
+            }
+            const newVaca = (await axios.post(`${API}/users/${this.state.user.id}/vacations`, payload)).data
+            this.setState({vacations: [...this.state.vacations, newVaca]});
+          }
+          async deleteVacation(vacation){
+            await axios.delete(`${API}/users/${this.state.user.id}/vacations/${vacation.id}`)
+            this.setState({vacations: this.state.vacations.filter(v => v.id !== vacation.id)})
+          }
+
+        render(){
+          const { error, user, companies, vacations, followingCompanies, notes } = this.state;
+          const {deleteNote, createNote, createVacation, deleteVacation, createCompany, deleteCompany} = this
+          //  console.log(notes);
+          // console.log(companies);
+          // console.log(vacations);
+          // console.log(followingCompanies);
+          // console.log(user);
+          const followed = companies.map( company => {
+            return {...company, follow: followingCompanies.find(f => f.companyId === company.id)}
+            } );
+          // console.log(followed)
+          // console.log(companies)
+          return (
+            <div>
+
+              <Notes notes={notes} user={user} error={error} createNote={createNote} deleteNote={deleteNote}/>
+              <Companies followed={followed} user={user} error={error} createCompany={createCompany} deleteCompany={deleteCompany}/>
+              <Vacation vacations={vacations} user={user} error={error} createVacation={createVacation} deleteVacation={deleteVacation}/>
+            </div>
+          );
+        }
+      }
+
+      ReactDOM.render(<App />, document.querySelector('#root'));
+    </script>
+  </body>
+</html>
+
+
